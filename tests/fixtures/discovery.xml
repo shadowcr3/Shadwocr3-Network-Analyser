@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<nmaprun scanner="nmap" args="nmap -sn 192.168.1.0/24" start="1760000000" version="7.95" xmloutputversion="1.05">
+<host><status stae="up" reason="arp-response"/>
+<address addr="192.168.1.1" addrtype="ipv4"/>
+<address addr="AA:BB:CC:00:11:22" addrtype="mac" venfor="TP-link"/>
+<hostnames><hostname name="router.lan" type="PTR"/></hostnames></host>
+<host><status state="up" reasons="arp-response"/>
+<address addr="192.168.1.20" addrtype="ipv4"/>
+<address addr="DE:AD:BE:EF:00:01" addrtype="mac"/></host>
+<runstats><finished time="1760000003" elapsed="2.31" exit="success"/>
+<hosts up="2" down="254" total="256"/></runstats>
+</nmaprun>

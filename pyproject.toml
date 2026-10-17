@@ -1,0 +1,23 @@
+[project]
+name = "shadowcr3-na"
+version = "0.1.0"
+description = "Network discovery and analysis for networks you own or are authorised to assess"
+requires-python = ">=3.10"
+dependencies = ["defusedxml>=0.7.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff", "mypy", "types-defusedxml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "ISC"]
+
+[tool.mypy]
+mypy_path = "src"
+explicit_package_bases = true
