@@ -7,8 +7,10 @@ import shutil
 import signal
 import subprocess
 import sys
+import threading
+import time
 
-from .errors import NmapNotFound, ScanFailed, ScanTimeout
+from .errors import NmapNotFound, ScanCancelled, ScanFailed, ScanTimeout
 from .profiles import Profile
 
 
@@ -26,19 +28,16 @@ def nmap_version(nmap_path: str) -> str | None:
     try:
         out = subprocess.run(
             [nmap_path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            **_popen_kwargs(),
+            capture_output=True, text=True, timeout=10, **_popen_kwargs(),
         ).stdout
     except (OSError, subprocess.SubprocessError):
         return None
-    m = re.search(r"Nmap Version(\S*)", out)
+    m = re.search(r"Nmap version (\S+)", out)
     return m.group(1) if m else None
 
 
 def is_privileged() -> bool:
-    """Best-effort: root / Administrator. Does not detec Linux file capabilities
+    """Best-effort: root / Administrator. Does not detect Linux file capabilities
     (CAP_NET_RAW), so it can under-report."""
     if sys.platform == "win32":
         try:
@@ -51,49 +50,60 @@ def is_privileged() -> bool:
 
 
 def build_command(
-    nmap_path: str, profile: Profile, target: ipaddress.IPv4Network, host_timeout_s: int
+    nmap_path: str,
+    profile: Profile,
+    target: ipaddress.IPv4Network,
+    host_timeout_s: int,
 ) -> list[str]:
     target_arg = str(target.network_address) if target.prefixlen == 32 else str(target)
     return [
         nmap_path,
         *profile.args,
-        "-oX",
-        "-",
-        "--host-timeout",
-        f"{host_timeout_s}s",
-        "--",
+        "-oX", "-",
+        "--host-timeout", f"{host_timeout_s}s",
+        "--",  # nothing after this can be parsed as an option
         target_arg,
     ]
 
 
 def run_nmap(
-    nmap_path: str, profile: Profile, target: ipaddress.IPv4Network, timeout_s: int
+    nmap_path: str,
+    profile: Profile,
+    target: ipaddress.IPv4Network,
+    timeout_s: int,
+    cancel: threading.Event | None = None,
 ) -> str:
     cmd = build_command(nmap_path, profile, target, max(1, int(timeout_s * 0.8)))
+    deadline = time.monotonic() + timeout_s
     with subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8", errors="replace",
         **_popen_kwargs(),
     ) as proc:
-        try:
-            out, err = proc.communicate(timeout=timeout_s)
-        except subprocess.TimeoutExpired:
-            _kill_tree(proc)
-            proc.communicate()
-            raise ScanTimeout(f"Scan exceeded {timeout_s}s and was stopped.") from None
-        if proc.returncode != 0:
-            raise ScanFailed(f"Nmap exited with code {proc.returncode}: {err.strip()[:500]}")
-        return out
+        while True:
+            wait = min(0.25, max(0.01, deadline - time.monotonic()))
+            try:
+                out, err = proc.communicate(timeout=wait)
+                break
+            except subprocess.TimeoutExpired:
+                if cancel is not None and cancel.is_set():
+                    _kill_tree(proc)
+                    proc.communicate()
+                    raise ScanCancelled("Scan cancelled.") from None
+                if time.monotonic() >= deadline:
+                    _kill_tree(proc)
+                    proc.communicate()
+                    raise ScanTimeout(f"Scan exceeded {timeout_s}s and was stopped.") from None
+    if proc.returncode != 0:
+        raise ScanFailed(f"Nmap exited with code {proc.returncode}: {err.strip()[:500]}")
+    return out
 
 
 def _popen_kwargs() -> dict:
     if sys.platform == "win32":
         return {"creationflags": subprocess.CREATE_NO_WINDOW}
-    return {"start_new_session": True}
+    return {"start_new_session": True}  # own process group so we can kill children too
 
 
 def _kill_tree(proc: subprocess.Popen) -> None:

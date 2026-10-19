@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from datetime import datetime, timezone
 
@@ -17,6 +18,7 @@ def scan(
     timeout_s: int = 120,
     policy: ScopePolicy = ScopePolicy(),
     nmap_path: str | None = None,
+    cancel: threading.Event | None = None,
 ) -> ScanResult:
     if not 1 <= timeout_s <= 3600:
         raise ValueError("timeout_s must be between 1 and 3600")
@@ -26,14 +28,15 @@ def scan(
     version = nmap_version(nmap)
     started = datetime.now(timezone.utc)
     t0 = time.monotonic()
-    xml = run_nmap(nmap, prof, net, timeout_s)
+    xml = run_nmap(nmap, prof, net, timeout_s, cancel)
     parsed = parse_nmap_xml(xml)
+    elapsed = parsed.elapsed_s if parsed.elapsed_s is not None else time.monotonic() - t0
     return ScanResult(
         target=str(net),
         profile=prof.name,
         nmap_version=parsed.nmap_version or version,
         privileged=is_privileged(),
         started_at=started,
-        duration_s=parsed.elapsed_s if parsed.elapsed_s is not None else time.monotonic() - t0,
+        duration_s=elapsed,
         hosts=parsed.hosts,
     )

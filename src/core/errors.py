@@ -7,11 +7,11 @@ class TargetError(Shadowcr3Error):
 
 
 class InvalidTarget(TargetError):
-    """not a well-formed single IPv4 address or CIDR."""
+    """Not a well-formed single IPv4 address or CIDR."""
 
 
 class ScopeViolation(TargetError):
-    """Well-Formed, but outside the allowed scan scope."""
+    """Well-formed, but outside the allowed scan scope."""
 
 
 class NmapNotFound(Shadowcr3Error):
@@ -19,6 +19,10 @@ class NmapNotFound(Shadowcr3Error):
 
 
 class ScanTimeout(Shadowcr3Error):
+    pass
+
+
+class ScanCancelled(Shadowcr3Error):
     pass
 
 
@@ -30,5 +34,5 @@ class ParseError(Shadowcr3Error):
     pass
 
 
-class ScanCancelled(Shadowcr3Error):
+class StorageError(Shadowcr3Error):
     pass
