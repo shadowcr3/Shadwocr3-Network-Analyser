@@ -23,3 +23,9 @@ mypy_path = "src"
 explicit_package_bases = true
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]

@@ -70,4 +70,4 @@ Tests use a fake Nmap executable and saved XML fixtures; they never touch a netw
 ## Known limitations (v0.1)
 
 - IPv4 only, single target per scan, no hostnames
-- No scan-to-scan compariso
+- No scan-to-scan comparison
