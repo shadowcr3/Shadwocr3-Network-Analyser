@@ -16,12 +16,13 @@ EXIT_CODES = (
     (E.Shadowcr3Error, 6),
 )
 
+
 def render(r: ScanResult) -> str:
     lines = [
-      (
-          f"Scan {r.target}  profile={r.profile}  nmap={r.nmap_version or '?'}  "
-          f"privileged={'yes' if r.privileged else 'no'}  {r.duration_s:.1f}s"
-      ),
+        (
+            f"Scan {r.target}  profile={r.profile}  nmap={r.nmap_version or '?'}  "
+            f"privileged={'yes' if r.privileged else 'no'}  {r.duration_s:.1f}s"
+        ),
     ]
     if not r.privileged:
         lines.append(
@@ -35,7 +36,8 @@ def render(r: ScanResult) -> str:
     for h in r.hosts:
         ports = ",".join(f"{p.number}/{p.service or '?'}" for p in h.open_ports) or "-"
         lines.append(f"{h.ip:<16}{h.mac or '-':<19}{h.hostname or '-':<28}{ports}")
-        return "\n".join(lines)
+    return "\n".join(lines)
+
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
@@ -44,10 +46,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("target", help="IPv4 address or CIDR (private/loopback/link-local only)")
     ap.add_argument("-p", "--profile", choices=sorted(PROFILES), default="discovery")
-    ap.add_argument("-t", "--timeout", type=int, default=120, help="hard timeout in seconds (1-3600)")
+    ap.add_argument(
+        "-t", "--timeout", type=int, default=120, help="hard timeout in seconds (1-3600)"
+    )
     ap.add_argument("--nmap-path", help="explicit path to the nmap binary")
     ap.add_argument(
-        "--i-am-authorised", "-i-am-authorized",
+        "--i-am-authorised",
+        "-i-am-authorized",
         action="store_true",
         help="confirm you own or have permission to scan this target",
     )
@@ -66,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(render(result))
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
