@@ -19,7 +19,7 @@ class ScanSummary:
 
 
 def save_scan(conn: sqlite3.Connection, result: ScanResult, *, attested: bool) -> int:
-    with conn:  # one transaction: a failure part-way leaves nothing behind
+    with conn:
         cur = conn.execute(
             "INSERT INTO scans (target, profile, nmap_version, privileged, attested,"
             " started_at, duration_s) VALUES (?, ?, ?, ?, ?, ?, ?)",

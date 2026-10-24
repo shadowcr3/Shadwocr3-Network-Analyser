@@ -1,4 +1,4 @@
-import os  
+import os
 import sys
 from pathlib import Path
 
@@ -26,9 +26,10 @@ if code:
 sys.stdout.write(Path(os.environ["FAKE_NMAP_XML"]).read_text(encoding="utf-8"))
 '''
 
+
 @pytest.fixture
 def fake_nmap(tmp_path, monkeypatch):
-    script = tmp_path/ "fake_nmap.py"
+    script = tmp_path / "fake_nmap.py"
     script.write_text(FAKE_NMAP, encoding="utf-8")
     if os.name == "nt":
         launcher = tmp_path / "nmap.cmd"
@@ -39,3 +40,13 @@ def fake_nmap(tmp_path, monkeypatch):
         launcher.chmod(0o755)
     monkeypatch.setenv("FAKE_NMAP_XML", str(FIXTURES / "discovery.xml"))
     return str(launcher)
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    pytest.importorskip("PySide6")
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    return QApplication.instance() or QApplication([])
+

@@ -4,16 +4,11 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import QCoreApplication, QEventLoop, Qt, QTimer  # noqa: E402
+from PySide6.QtCore import QEventLoop, Qt, QTimer  # noqa: E402
 
 from core.models import Host, Port  # noqa: E402
 from gui.host_table import SORT_ROLE, HostTableModel  # noqa: E402
 from gui.worker import ScanThread  # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def qapp():
-    return QCoreApplication.instance() or QCoreApplication([])
 
 
 def run_thread(thread, timeout_ms=20000):

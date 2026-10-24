@@ -77,8 +77,6 @@ class HostTableModel(QAbstractTableModel):
 
     @staticmethod
     def _ports_tooltip(host: Host) -> str:
-        # Banners come from the network: escape them, because Qt renders
-        # tooltips as rich text.
         lines = (
             f"{p.number}/{p.protocol} {p.service or '?'} {p.product or ''} {p.version or ''}"
             for p in host.open_ports

@@ -73,8 +73,6 @@ def _migrate(conn: sqlite3.Connection) -> None:
             f"up to {SCHEMA_VERSION}. Update the app."
         )
     if version == 0:
-        # One script, one transaction: the schema and the version stamp
-        # land together or not at all.
         conn.executescript(
             f"BEGIN;\n{SCHEMA}\nPRAGMA user_version = {SCHEMA_VERSION};\nCOMMIT;"
         )

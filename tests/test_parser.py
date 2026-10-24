@@ -52,7 +52,7 @@ def test_ports_and_open_filter():
     "not xml",
     "<html/>",
     ("<nmaprun><host><address addr='1.1.1.1' addrtype='ipv4'/>"
-    "<ports><port portid='x'/></ports></host></nmaprun>"),   # non-numeric port
+    "<ports><port portid='x'/></ports></host></nmaprun>"),
 ])
 def test_bad_input_raises_parse_error(xml):
     with pytest.raises(ParseError):
