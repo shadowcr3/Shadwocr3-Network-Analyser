@@ -1,11 +1,16 @@
+import logging
 import os
 import sys
 from pathlib import Path
 
 import pytest
 
+from shadowcr3_na.core.policy import ScanGuard
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
+# A stand-in for nmap, driven by environment variables so every failure path
+# can be exercised without a network or a real Nmap.
 FAKE_NMAP = '''\
 import os
 import sys
@@ -16,15 +21,42 @@ marker = os.environ.get("FAKE_NMAP_MARKER")
 if marker:
     Path(marker).touch()
 if sys.argv[1:] == ["--version"]:
-    print("Nmap version 7.95 ( https://nmap.org )")
+    print("Nmap version " + os.environ.get("FAKE_NMAP_VERSION", "7.95") + " ( https://nmap.org )")
     sys.exit(0)
+args = os.environ.get("FAKE_NMAP_ARGS")
+if args:
+    Path(args).write_text(" ".join(sys.argv[1:]))
+pidfile = os.environ.get("FAKE_NMAP_PIDFILE")
+if pidfile:
+    Path(pidfile).write_text(str(os.getpid()))
 time.sleep(float(os.environ.get("FAKE_NMAP_SLEEP", "0")))
+stderr = os.environ.get("FAKE_NMAP_STDERR")
+if stderr:
+    print(stderr, file=sys.stderr)
 code = os.environ.get("FAKE_NMAP_EXIT")
 if code:
-    print("boom", file=sys.stderr)
+    if not stderr:
+        print("boom", file=sys.stderr)
     sys.exit(int(code))
 sys.stdout.write(Path(os.environ["FAKE_NMAP_XML"]).read_text(encoding="utf-8"))
 '''
+
+
+@pytest.fixture(autouse=True)
+def isolated_home(tmp_path, monkeypatch):
+    """Never touch the real per-user data directory."""
+    monkeypatch.setenv("SHADOWCR3_NA_HOME", str(tmp_path / "home"))
+    yield
+    logger = logging.getLogger("shadowcr3_na")
+    for handler in list(logger.handlers):
+        if getattr(handler, "_shadowcr3", False):
+            logger.removeHandler(handler)
+            handler.close()
+
+
+@pytest.fixture
+def guard():
+    return ScanGuard()  # fresh guard: no cooldown carried over between tests
 
 
 @pytest.fixture
@@ -49,4 +81,3 @@ def qapp():
     from PySide6.QtWidgets import QApplication
 
     return QApplication.instance() or QApplication([])
-

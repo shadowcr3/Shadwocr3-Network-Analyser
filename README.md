@@ -1,33 +1,54 @@
 # Shadowcr3 Network Analyzer
 
-Network discovery and port/service analysis for networks you own or are
-explicitly authorised to assess. Python, Nmap, SQLite, PySide6.
+Discover hosts and open services on networks **you own or are explicitly authorised to assess**.
+Python, Nmap, SQLite and PySide6. Local-first: nothing leaves your machine.
 
-> **Use only on networks you own or have written permission to test.**
-> The tool enforces a conservative scope (private, loopback and link-local
-> IPv4 ranges, at most 256 addresses) and records your authorisation
-> confirmation with every saved scan. It cannot verify that confirmation;
-> that responsibility is yours.
+> **Use only on networks you own or have written permission to test.** The tool enforces a
+> conservative scope and records your authorisation confirmation, but it cannot verify it.
+> That responsibility is yours. See [docs/SAFETY.md](docs/SAFETY.md).
+
+## Status: v0.1.0
+
+Verified in this release (automated tests, plus manual checks on the maintainer's machines):
+
+- Scoped host discovery and port/service scans through Nmap (GUI and CLI)
+- Safety gates: private-range-only scope, size cap, authorisation confirmation, impact
+  confirmation for large scans, one scan at a time, cooldown, Nmap rate and retry caps
+- Append-only audit log, scan history with provenance (exact command, tool version, exit
+  status, completeness, SHA-256 of the original output), JSON/CSV reports
+- Cancellation, hard timeouts, partial-result labelling, interrupted-scan detection
+
+Planned, **not** in this release: live traffic monitoring, topology graph, packet/PCAP
+analysis, Suricata/Zeek/Greenbone/OSINT integrations, plugins, investigations, scan comparison.
+See [docs/ROADMAP.md](docs/ROADMAP.md). Tested platforms: Windows 11 and Linux. macOS is untested.
 
 ## Requirements
 
 - Python 3.10+
-- [Nmap](https://nmap.org/download) on `PATH` (the Windows installer bundles Npcap)
-- Windows 11 and Linux (Arch) are the tested targets; macOS is best-effort
+- [Nmap](https://nmap.org/download) 7.80+ on `PATH` (the Windows installer bundles Npcap)
 
-## Install (from source)
+## Install
 
 ```
 python -m venv .venv
-.venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
-pip install -e ".[dev]"
+.venv\Scripts\activate            # Linux: source .venv/bin/activate
+pip install -e ".[gui]"
+shadowcr3-na doctor               # verifies Nmap, privileges and storage
 ```
 
-## Usage (CLI)
+## Use
+
+GUI: `shadowcr3-na-gui`. Enter a target such as `192.168.1.0/24`, tick the authorisation box,
+choose a profile and press Scan.
+
+CLI:
 
 ```
-python src/cli.py 192.168.1.0/24 --i-am-authorised
-python src/cli.py 192.168.1.20 -p services --i-am-authorised
+shadowcr3-na scan 192.168.1.0/24 --i-am-authorised --confirm-high-impact --save
+shadowcr3-na scan 192.168.1.20 -p services --i-am-authorised --json report.json
+shadowcr3-na history list
+shadowcr3-na history show 3 --raw
+shadowcr3-na audit
 ```
 
 | Profile | What it does |
@@ -36,38 +57,51 @@ python src/cli.py 192.168.1.20 -p services --i-am-authorised
 | `quick-ports` | Top 100 TCP ports |
 | `services` | Top 100 TCP ports plus light service/version detection |
 
+Scans above 64 addresses, or `services` above 16, are **high impact** and need explicit
+confirmation (a dialog in the GUI, `--confirm-high-impact` in the CLI).
+
 | Exit code | Meaning |
 |---|---|
-| 0 | Scan completed (zero hosts found is still a valid result) |
-| 2 | Invalid input or missing authorisation flag |
+| 0 | Success (zero hosts is still a valid result) |
+| 2 | Invalid input or missing authorisation |
 | 3 | Target outside the allowed scope |
-| 4 | Nmap not found |
+| 4 | Nmap missing or unsupported |
 | 5 | Scan timed out |
 | 6 | Scan failed or output could not be parsed |
+| 7 | High-impact scan not confirmed |
+| 8 | Refused by rate limiting (busy or cooldown) |
+| 9 | Storage or audit log unavailable |
+| 130 | Interrupted (Ctrl+C) |
 
 ## Privileges
 
-Raw-socket features (ARP discovery, MAC addresses, SYN scans) need
-Administrator/root. Without them Nmap falls back to TCP connect probes and
-MAC addresses are unavailable. Results show whether the scan was privileged.
+ARP discovery and MAC addresses need Administrator/root. Without them Nmap falls back to TCP
+probes, MAC addresses are unavailable and quiet hosts can be missed; results say whether the
+scan was privileged. Running the whole app elevated is a known v0.1 limitation (a separate
+elevated helper is planned).
 
-## Reports and history
+## Your data
 
-Scans are stored in a local SQLite database (per-user data directory).
-Reports export to JSON or CSV. CSV cells that begin with `=`, `+`, `-` or `@`
-are prefixed with `'` so spreadsheet apps do not execute scanned data as formulas.
+Stored per user: `%LOCALAPPDATA%\shadowcr3-na\` on Windows, `~/.local/share/shadowcr3-na/` on
+Linux (override with `SHADOWCR3_NA_HOME`). It holds the history database (scans, hosts, ports,
+original Nmap output, audit log) and rotated logs. Nothing is uploaded. Deletion and pruning are
+always explicit. Reports contain IPs, MACs, hostnames and open services: store them securely.
 
-## Development
+## Develop
 
 ```
-python -m ruff check src
+pip install -e ".[gui,dev]"
+python -m ruff check src tests
 python -m mypy src
 python -m pytest
 ```
 
-Tests use a fake Nmap executable and saved XML fixtures; they never touch a network.
+Tests use a fake Nmap and fixtures; they never touch a network.
 
-## Known limitations (v0.2)
+## Known limitations (v0.1)
 
-- IPv4 only, single target per scan, no hostnames
-- No scan-to-scan comparison yet
+- IPv4 only, one target per scan, no hostnames
+- The one-scan-at-a-time guard is per process (CLI and GUI are not coordinated)
+- The audit log blocks accidental edits but is not tamper-proof against a privileged local user
+- Nmap's reverse DNS lookups go to your configured resolver
+- Windows packaging script is provided but its output must be smoke-tested before release
