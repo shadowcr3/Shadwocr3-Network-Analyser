@@ -196,8 +196,8 @@ def test_delete_requires_confirmation_and_is_audited(window, monkeypatch):
 
 
 def test_export_warns_then_writes_and_audits_the_hash(window, tmp_path, monkeypatch):
-    out = tmp_path / "report.json"
-    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(out), "JSON (*.json)"))
+    out = tmp_path / "report.pdf"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: (str(out), "PDF report (*.pdf)"))
     start(window)
     assert wait_for(lambda: finished(window) and window._model.rowCount() == 2)
     answer(monkeypatch, NO)
@@ -206,7 +206,7 @@ def test_export_warns_then_writes_and_audits_the_hash(window, tmp_path, monkeypa
     answer(monkeypatch, YES)
     window._export_btn.click()
     event = audit.list_events(window._conn)[0]
-    assert event.event == "report_exported"
+    assert event.event == "report_exported" and out.read_bytes().startswith(b"%PDF-")
     assert event.details["sha256"] == hashlib.sha256(out.read_bytes()).hexdigest()
 
 

@@ -23,6 +23,7 @@ from .errors import (
 )
 from .policy import DEFAULT_LIMITS, ScanLimits
 from .profiles import Profile
+from .textutil import clean_text
 
 MAX_OUTPUT_BYTES = 20 * 1024 * 1024
 _PRIVILEGE_HINTS = re.compile(
@@ -38,11 +39,6 @@ class RunOutput:
     stderr: str
     returncode: int
     command: tuple[str, ...]
-
-
-def clean_text(text: str, limit: int = 500) -> str:
-    """Tool output is untrusted: drop control/non-ASCII characters and truncate."""
-    return re.sub(r"[^\x20-\x7e\n]", "?", text)[:limit]
 
 
 def find_nmap(explicit: str | None = None) -> str:

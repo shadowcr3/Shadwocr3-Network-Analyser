@@ -2,7 +2,11 @@
 
 ## 0.1.0
 
-First release.
+First release: the full workstation.
+
+- Dashboard, topology, assets, packet analysis (TShark), alerts (Suricata EVE), Zeek import,
+  investigations, integrations and audit workspaces; light and dark themes
+- Branded PDF reports for scans and investigations; CSV data export
 
 - Scoped Nmap discovery and service scans from a PySide6 GUI and a CLI
 - Safety gates: private-range scope, size cap, authorisation, impact confirmation, one scan at a

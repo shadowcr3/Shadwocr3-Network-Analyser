@@ -9,11 +9,11 @@ description = "Network discovery and analysis for networks you own or are author
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Shadowcr3" }]
-dependencies = ["defusedxml>=0.7.1"]
+dependencies = ["defusedxml>=0.7.1", "psutil>=5.9", "networkx>=3.0", "reportlab>=4.0"]
 
 [project.optional-dependencies]
 gui = ["PySide6>=6.6"]
-dev = ["pytest>=8", "ruff", "mypy", "types-defusedxml", "pyinstaller>=6"]
+dev = ["pytest>=8", "ruff", "mypy", "types-defusedxml", "types-psutil", "pypdf>=4", "pyinstaller>=6"]
 
 [project.scripts]
 shadowcr3-na = "shadowcr3_na.cli:main"
@@ -29,7 +29,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.ruff]
-line-length = 100
+line-length = 110
 target-version = "py310"
 
 [tool.ruff.lint]
@@ -42,3 +42,7 @@ select = ["E", "F", "ISC"]
 mypy_path = "src"
 explicit_package_bases = true
 python_version = "3.10"
+
+[[tool.mypy.overrides]]
+module = ["networkx", "networkx.*", "reportlab", "reportlab.*"]
+ignore_missing_imports = true

@@ -1,4 +1,3 @@
-import json
 import sqlite3
 
 import pytest
@@ -121,9 +120,10 @@ def test_history_show_export_delete_prune(db, guard, fake_nmap, tmp_path, capsys
     capsys.readouterr()
     assert run(db, guard, "history", "show", "1", "--raw") == 0
     assert "<nmaprun" in capsys.readouterr().out
-    out = tmp_path / "scan.json"
+    out = tmp_path / "scan.pdf"
     assert run(db, guard, "history", "export", "1", str(out)) == 0
-    assert json.loads(out.read_text())["schema_version"] == 2
+    assert out.read_bytes().startswith(b"%PDF-")
+    assert run(db, guard, "history", "export", "1", str(tmp_path / "scan.json")) == 2
     assert run(db, guard, "history", "delete", "1") == 2  # needs --yes
     assert run(db, guard, "history", "delete", "1", "--yes") == 0
     assert run(db, guard, "history", "prune", "--keep", "1") == 2
@@ -144,8 +144,9 @@ def test_audit_command_and_doctor(db, guard, fake_nmap, capsys):
 
 
 def test_export_flags_write_reports_and_audit_hashes(db, guard, fake_nmap, tmp_path):
-    out = tmp_path / "r.csv"
-    assert run(db, guard, "scan", "192.168.1.5", "--i-am-authorised", "--csv", str(out),
-               nmap=fake_nmap) == 0
+    pdf, csv_out = tmp_path / "r.pdf", tmp_path / "r.csv"
+    assert run(db, guard, "scan", "192.168.1.5", "--i-am-authorised", "--pdf", str(pdf),
+               "--csv", str(csv_out), nmap=fake_nmap) == 0
     exported = [e for e in events(db) if e[0] == "report_exported"]
-    assert out.exists() and len(exported[0][1]["sha256"]) == 64
+    assert pdf.read_bytes().startswith(b"%PDF-") and csv_out.exists() and len(exported) == 2
+    assert all(len(e[1]["sha256"]) == 64 for e in exported)

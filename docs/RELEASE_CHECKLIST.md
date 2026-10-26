@@ -10,7 +10,9 @@ Before tagging, on the Windows 11 machine, using only your own network:
 - [ ] Same `/24` from a normal and an Administrator terminal; compare hosts and MACs
 - [ ] Cancel a running `/24` scan: status says cancelled, no `nmap.exe` left in Task Manager
 - [ ] Press Scan twice quickly: second attempt is refused (cooldown), no crash
-- [ ] Export JSON and CSV; open the CSV in Excel; confirm no formula executes
+- [ ] Export a PDF and a CSV; open the PDF (branding, page numbers, tables) and the CSV in Excel
+- [ ] Import a Suricata EVE file and a Zeek conn.log; open a PCAP in Packets; check the topology
+- [ ] Create an investigation, link evidence, export its PDF report
 - [ ] Close and reopen: history persists; incomplete scans are marked; Audit log opens
 - [ ] Rename the history database temporarily: the app starts cleanly with a new one
 - [ ] `packaging\build_windows.ps1`, then run the built exe on a machine without Python

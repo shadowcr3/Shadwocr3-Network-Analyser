@@ -2,20 +2,14 @@
 
 | Area | v0.1.0 | Next |
 |---|---|---|
-| Authorised reconnaissance (Nmap) | Done: scoped discovery and service scans | Exclusions, IPv6, per-target budgets |
-| Safety gates, audit, rate limits | Done for scans | Generalise into a shared policy engine for every integration |
-| Data, history, export | Done: SQLite, provenance, JSON/CSV | Retention settings, redaction options, reports |
-| Job management | Single scan guard, cancellation | Job manager: IDs, states, queue, progress |
-| Integration framework | Nmap adapter only | Adapter contract (capabilities, limits, cancellation), plugin permissions |
-| Packet analysis | Not started | TShark PCAP/PCAPNG import, filters, offline replay |
-| Defensive monitoring | Not started | Offline Zeek and Suricata (EVE) ingestion |
-| Live monitoring | Not started | psutil interface metrics, pyqtgraph charts |
-| Topology | Not started | QGraphicsView and NetworkX with provenance per edge |
-| Investigations, correlation | Not started | Linked evidence, notes, uncertainty-aware correlation |
-| Vulnerability and OSINT imports | Not started | Greenbone import, then SpiderFoot/Amass |
+| Authorised reconnaissance (Nmap) | Done: scoped, rate-limited, confirmed, audited | Exclusions, IPv6, per-target budgets |
+| Live monitoring | Done: interface counters and charts (not packet capture) | Per-protocol breakdown, configurable refresh |
+| Topology | Done: evidence-aware graph, filters, provenance, partial-view notice | Inferred edges, layouts |
+| Packet analysis | Done offline: TShark PCAP/PCAPNG, filters, Wireshark launch | Live capture with a least-privilege helper |
+| Defensive monitoring | Done: Suricata EVE and Zeek conn.log import, alert triage | Zeek DNS/TLS logs, anomaly rules |
+| Assets and investigations | Done: provenance, uncertainty, notes, PDF reports | Correlation suggestions, search across sources |
+| Integration framework | Detected tools, import adapters | Formal adapter contract and plugin permissions |
+| Greenbone, SpiderFoot, Amass | Not implemented | Structured imports |
+| Job management | Per-page background tasks, scan guard | Central job queue with persisted states |
 | Privilege model | App must be elevated for ARP/MAC | Separate elevated helper process |
 | Packaging | Windows script provided | Signed builds, Linux packages |
-
-Order of work: platform core -> offline imports -> live monitoring -> topology -> investigations
--> external-intelligence imports. Offline before live and adapters before UI keeps privileged and
-active features for last.

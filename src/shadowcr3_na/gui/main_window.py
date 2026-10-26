@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QSortFilterProxyModel, Qt
+from PySide6.QtCore import QSortFilterProxyModel, Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -30,12 +30,13 @@ from PySide6.QtWidgets import (
 
 from shadowcr3_na.core.environment import check_environment
 from shadowcr3_na.core.errors import TargetError
-from shadowcr3_na.core.export import write_report
 from shadowcr3_na.core.models import ScanResult
 from shadowcr3_na.core.policy import DEFAULT_LIMITS, Impact, ScanGuard, ScanLimits, assess_impact
 from shadowcr3_na.core.profiles import PROFILES
 from shadowcr3_na.core.scope import validate_target
+from shadowcr3_na.reports import write_scan_report
 from shadowcr3_na.storage import audit
+from shadowcr3_na.storage.inventory import upsert_assets_from_scan
 from shadowcr3_na.storage.repository import delete_scan, get_scan, list_scans, save_scan
 
 from .audit_dialog import AuditDialog
@@ -57,6 +58,8 @@ def _plain_label(text: str = "") -> QLabel:
 
 
 class MainWindow(QMainWindow):
+    data_changed = Signal()
+
     def __init__(
         self,
         conn: sqlite3.Connection,
@@ -319,6 +322,11 @@ class MainWindow(QMainWindow):
             log.exception("could not save scan")
             saved = False
         self._shown_scan_id = scan_id
+        if scan_id is not None:
+            try:
+                upsert_assets_from_scan(self._conn, scan_id, result)
+            except sqlite3.Error:
+                log.exception("could not update the asset inventory")
         self._show_result(result)
         if not saved:
             self._set_status(
@@ -330,6 +338,7 @@ class MainWindow(QMainWindow):
         )
         if scan_id is not None:
             self._refresh_history(select_id=scan_id)
+        self.data_changed.emit()
 
     def _on_failed(self, category: str, message: str) -> None:
         event = "scan_timed_out" if category == "timeout" else "scan_failed"
@@ -451,14 +460,14 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.StandardButton.Yes:
             return
         path, selected = QFileDialog.getSaveFileName(
-            self, "Export report", "scan.json", "JSON (*.json);;CSV (*.csv)"
+            self, "Export report", "scan-report.pdf", "PDF report (*.pdf);;CSV data (*.csv)"
         )
         if not path:
             return
         if not Path(path).suffix:
-            path += ".csv" if "csv" in selected.lower() else ".json"
+            path += ".csv" if "csv" in selected.lower() else ".pdf"
         try:
-            info = write_report(self._result, path)
+            info = write_scan_report(self._result, path)
         except (OSError, ValueError) as exc:
             self._audit("report_export_failed", scan_id=self._shown_scan_id, error=str(exc)[:300])
             QMessageBox.warning(self, "Export failed", str(exc))
@@ -473,8 +482,12 @@ class MainWindow(QMainWindow):
     # ---- lifecycle ----------------------------------------------------
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        self.shutdown()
+        super().closeEvent(event)
+
+    def shutdown(self) -> None:
+        """Stop any running scan cleanly. Safe to call more than once."""
         if self._thread is not None:
             self._thread.cancel()
             self._thread.wait(10000)  # never destroy a running QThread
             self._finish_job("scan_cancelled", reason="window_closed")
-        super().closeEvent(event)

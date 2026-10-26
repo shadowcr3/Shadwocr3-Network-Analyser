@@ -9,7 +9,7 @@ from shadowcr3_na.core.errors import StorageError
 from shadowcr3_na.logging_setup import configure_logging
 from shadowcr3_na.storage.db import connect
 
-from .main_window import MainWindow
+from .workstation import Workstation
 
 log = logging.getLogger(__name__)
 
@@ -20,14 +20,14 @@ def main() -> int:
     try:
         configure_logging()
     except OSError:
-        pass 
+        pass  # logging must never block startup
     try:
         conn = connect()
     except StorageError as exc:
         log.error("history database unavailable: %s", exc)
         QMessageBox.critical(None, "History database", str(exc))
         return 1
-    window = MainWindow(conn)
+    window = Workstation(conn)
     window.show()
     code = app.exec()
     conn.close()

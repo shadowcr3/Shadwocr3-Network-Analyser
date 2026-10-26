@@ -1,12 +1,11 @@
 import csv
 import hashlib
 import io
-import json
 from datetime import datetime, timezone
 
 import pytest
 
-from shadowcr3_na.core.export import to_csv, to_json, write_report
+from shadowcr3_na.core.export import to_csv, write_report
 from shadowcr3_na.core.models import Host, Port, ScanResult
 
 RESULT = ScanResult(
@@ -24,15 +23,6 @@ RESULT = ScanResult(
 
 def rows(text):
     return list(csv.DictReader(io.StringIO(text)))
-
-
-def test_json_content_includes_provenance():
-    data = json.loads(to_json(RESULT))
-    assert data["schema_version"] == 2 and data["target"] == "192.168.1.0/24"
-    assert data["complete"] is False and data["command"] == ["nmap", "-F"]
-    assert data["raw_sha256"] == "cd" * 32 and data["warnings"] == ["Warning: x"]
-    assert [h["ip"] for h in data["hosts"]] == ["192.168.1.1", "192.168.1.2"]
-    assert data["hosts"][0]["ports"][0]["product"] == "OpenSSH"
 
 
 def test_csv_rows_and_completeness_column():
@@ -55,16 +45,16 @@ def test_csv_formula_injection_is_neutralised(evil):
     assert rows(to_csv(hostile))[0]["hostname"] == "'" + evil
 
 
-def test_write_report_returns_a_verifiable_hash(tmp_path):
-    info = write_report(RESULT, tmp_path / "scan.json")
+def test_write_report_returns_a_verifiable_hash_and_is_csv_only(tmp_path):
+    info = write_report(RESULT, tmp_path / "scan.csv")
     assert hashlib.sha256(info.path.read_bytes()).hexdigest() == info.sha256
     assert info.size == info.path.stat().st_size
-    csv_info = write_report(RESULT, tmp_path / "scan.csv")
-    assert csv_info.path.read_text(encoding="utf-8-sig").startswith("target,profile")
+    assert info.path.read_text(encoding="utf-8-sig").startswith("target,profile")
     assert not list(tmp_path.glob("*.tmp"))
 
 
-def test_write_report_rejects_unknown_extension(tmp_path):
+@pytest.mark.parametrize("name", ["scan.json", "scan.pdf", "scan.txt"])
+def test_data_export_rejects_other_formats(tmp_path, name):
     with pytest.raises(ValueError):
-        write_report(RESULT, tmp_path / "scan.pdf")
+        write_report(RESULT, tmp_path / name)
     assert not list(tmp_path.iterdir())

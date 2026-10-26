@@ -42,8 +42,12 @@ class ConfirmationRequired(PolicyError):
     category = "confirmation_required"
 
 
-class NmapNotFound(Shadowcr3Error):
+class ToolNotFound(Shadowcr3Error):
     category = "missing_dependency"
+
+
+class NmapNotFound(ToolNotFound):
+    pass
 
 
 class UnsupportedNmap(Shadowcr3Error):
@@ -76,3 +80,13 @@ class ParseError(Shadowcr3Error):
 
 class StorageError(Shadowcr3Error):
     category = "storage"
+
+
+class InputRejected(Shadowcr3Error):
+    """An imported file failed validation (type, size, structure)."""
+
+    category = "malformed_input"
+
+
+class MetricsUnavailable(Shadowcr3Error):
+    category = "unavailable"

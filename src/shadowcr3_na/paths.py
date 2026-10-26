@@ -1,3 +1,4 @@
+"""Per-user data locations. SHADOWCR3_NA_HOME overrides everything (tests, portable use)."""
 from __future__ import annotations
 
 import os

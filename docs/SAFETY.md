@@ -35,8 +35,8 @@ can still alter it. The log records what the application did; it is not forensic
 
 Everything stays local. Original Nmap output is stored compressed with its SHA-256 and verified
 on read. Nothing is deleted automatically: use the GUI's Delete, or
-`shadowcr3-na history prune --keep N --yes`. Audit entries are kept when scans are deleted. Reports
-include network details; the GUI asks before exporting and records each report's SHA-256.
+`shadowcr3-na history prune --keep N --yes`. Audit entries are kept when scans are deleted. PDF and
+CSV reports include network details; the GUI asks before exporting and records each report's SHA-256.
 Log files are rotated (1 MB x 3), structured and redacted for common secret patterns.
 
 ## Not covered in v0.1

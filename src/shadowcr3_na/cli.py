@@ -1,3 +1,5 @@
+"""Command-line front end. Safe by default: no scan runs without an attestation, a
+valid in-scope target, a writable audit log, and (for large scans) confirmation."""
 from __future__ import annotations
 
 import argparse
@@ -12,7 +14,6 @@ from typing import Any
 from shadowcr3_na import __version__
 from shadowcr3_na.core import errors as E
 from shadowcr3_na.core.environment import check_environment
-from shadowcr3_na.core.export import write_report
 from shadowcr3_na.core.models import ScanResult
 from shadowcr3_na.core.policy import DEFAULT_LIMITS, ScanGuard, assess_impact
 from shadowcr3_na.core.profiles import PROFILES
@@ -20,6 +21,7 @@ from shadowcr3_na.core.scanner import scan
 from shadowcr3_na.core.scope import validate_target
 from shadowcr3_na.logging_setup import configure_logging
 from shadowcr3_na.paths import default_db_path, log_dir
+from shadowcr3_na.reports import write_scan_report
 from shadowcr3_na.storage import audit
 from shadowcr3_na.storage.db import connect
 from shadowcr3_na.storage.repository import (
@@ -178,7 +180,7 @@ def _cmd_scan(args: argparse.Namespace, conn: sqlite3.Connection, guard: ScanGua
         complete=result.complete, duration_s=result.duration_s, saved=scan_id is not None,
     )
     print(render_result(result))
-    for flag, suffix in ((args.json, ".json"), (args.csv, ".csv")):
+    for flag, suffix in ((args.pdf, ".pdf"), (args.csv, ".csv")):
         if flag:
             status = _export(conn, result, Path(flag), suffix, scan_id, job_id) or status
     return status
@@ -188,10 +190,10 @@ def _export(
     conn: sqlite3.Connection, result: ScanResult, path: Path, suffix: str,
     scan_id: int | None, job_id: str | None,
 ) -> int:
-    if path.suffix.lower() != suffix:
-        return _fail(f"export path must end in {suffix}", EXIT_USAGE)
+    if suffix not in (".pdf", ".csv") or path.suffix.lower() != suffix:
+        return _fail("export path must end in .pdf (report) or .csv (data)", EXIT_USAGE)
     try:
-        info = write_report(result, path)
+        info = write_scan_report(result, path)
     except (OSError, ValueError) as exc:
         return _fail(f"export failed: {exc}", EXIT_FAILED)
     _safe_audit(conn, "report_exported", job_id, scan_id=scan_id, path=str(info.path),
@@ -282,8 +284,8 @@ def _build_parser() -> argparse.ArgumentParser:
     sc.add_argument("--confirm-high-impact", action="store_true",
                     help="acknowledge a large or intrusive scan")
     sc.add_argument("--save", action="store_true", help="save the result to history")
-    sc.add_argument("--json", metavar="PATH", help="also write a JSON report")
-    sc.add_argument("--csv", metavar="PATH", help="also write a CSV report")
+    sc.add_argument("--pdf", metavar="PATH", help="also write a branded PDF report")
+    sc.add_argument("--csv", metavar="PATH", help="also write a CSV data export")
     sc.set_defaults(func=_cmd_scan)
 
     hi = sub.add_parser("history", help="saved scans")
@@ -318,7 +320,7 @@ def main(argv: Sequence[str] | None = None, *, guard: ScanGuard | None = None) -
     try:
         configure_logging()
     except OSError:
-        pass
+        pass  # logging must never block a safe operation
     if args.command == "doctor":
         return _cmd_doctor(args)
     try:
@@ -333,6 +335,7 @@ def main(argv: Sequence[str] | None = None, *, guard: ScanGuard | None = None) -
         return args.func(args, conn, guard)
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,3 +1,4 @@
+"""Structured, rotated, redacted logging to the per-user log directory."""
 from __future__ import annotations
 
 import json
@@ -59,9 +60,4 @@ def configure_logging(level: int = logging.INFO, directory: Path | None = None) 
     logger.setLevel(level)
     logger.propagate = False
     restrict_file(path)
-
-
-
-
-
-
+    return path

@@ -3,14 +3,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from .models import ScanResult
-
-REPORT_SCHEMA_VERSION = 2
 
 CSV_COLUMNS = (
     "target", "profile", "started_at", "scan_complete", "ip", "host_state", "mac", "vendor",
@@ -26,28 +22,6 @@ class ReportInfo:
     path: Path
     sha256: str
     size: int
-
-
-def result_to_dict(r: ScanResult) -> dict[str, Any]:
-    return {
-        "schema_version": REPORT_SCHEMA_VERSION,
-        "target": r.target,
-        "profile": r.profile,
-        "nmap_version": r.nmap_version,
-        "privileged": r.privileged,
-        "started_at": r.started_at.isoformat(),
-        "duration_s": r.duration_s,
-        "command": list(r.command),
-        "exit_status": r.exit_status,
-        "complete": r.complete,
-        "warnings": list(r.warnings),
-        "raw_sha256": r.raw_sha256,
-        "hosts": [asdict(h) for h in r.hosts],
-    }
-
-
-def to_json(r: ScanResult) -> str:
-    return json.dumps(result_to_dict(r), indent=2, ensure_ascii=False) + "\n"
 
 
 def _cell(value: object) -> str:
@@ -79,18 +53,13 @@ def to_csv(r: ScanResult) -> str:
 
 
 def write_report(result: ScanResult, path: str | Path) -> ReportInfo:
-    """Write atomically (temp file then rename) and return the file's SHA-256."""
+    """Write a CSV export atomically and return its SHA-256. (PDF: shadowcr3_na.reports.)"""
     target = Path(path)
-    suffix = target.suffix.lower()
-    if suffix == ".json":
-        text, encoding = to_json(result), "utf-8"
-    elif suffix == ".csv":
-        text, encoding = to_csv(result), "utf-8-sig"  # BOM so Excel reads UTF-8
-    else:
-        raise ValueError(f"Unsupported report format '{target.suffix}'. Use .json or .csv.")
+    if target.suffix.lower() != ".csv":
+        raise ValueError(f"Unsupported data format '{target.suffix}'. Use .csv.")
     tmp = target.with_name(target.name + ".tmp")
     try:
-        tmp.write_text(text, encoding=encoding, newline="")
+        tmp.write_text(to_csv(result), encoding="utf-8-sig", newline="")  # BOM: Excel reads UTF-8
         tmp.replace(target)
     finally:
         if tmp.exists():

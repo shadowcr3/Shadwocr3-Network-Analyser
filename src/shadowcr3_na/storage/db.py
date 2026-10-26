@@ -76,7 +76,89 @@ CREATE TRIGGER audit_no_delete BEFORE DELETE ON audit_log
 BEGIN SELECT RAISE(ABORT, 'audit_log is append-only'); END;
 """
 
-MIGRATIONS: tuple[str, ...] = (_V1, _V2)
+_V3 = """
+CREATE TABLE imports (
+    id          INTEGER PRIMARY KEY,
+    kind        TEXT NOT NULL,       -- suricata_eve | zeek_conn | pcap
+    path        TEXT NOT NULL,
+    sha256      TEXT NOT NULL,
+    size        INTEGER NOT NULL,
+    imported_at TEXT NOT NULL,
+    records     INTEGER NOT NULL,
+    rejected    INTEGER NOT NULL,
+    truncated   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE assets (
+    id         INTEGER PRIMARY KEY,
+    ip         TEXT NOT NULL UNIQUE,
+    mac        TEXT,
+    vendor     TEXT,
+    hostname   TEXT,
+    first_seen TEXT NOT NULL,
+    last_seen  TEXT NOT NULL,
+    sources    TEXT NOT NULL DEFAULT '[]',   -- JSON list of provenance tags
+    uncertain  INTEGER NOT NULL DEFAULT 0,
+    note       TEXT
+);
+
+CREATE TABLE connections (
+    id         INTEGER PRIMARY KEY,
+    src        TEXT NOT NULL,
+    dst        TEXT NOT NULL,
+    protocol   TEXT NOT NULL,
+    dst_port   INTEGER,
+    first_seen TEXT NOT NULL,
+    last_seen  TEXT NOT NULL,
+    packets    INTEGER,
+    bytes      INTEGER,
+    flows      INTEGER NOT NULL DEFAULT 1,
+    kind       TEXT NOT NULL DEFAULT 'observed',   -- observed | inferred
+    import_id  INTEGER REFERENCES imports(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_conn_src ON connections(src);
+CREATE INDEX idx_conn_dst ON connections(dst);
+
+CREATE TABLE alerts (
+    id           INTEGER PRIMARY KEY,
+    ts           TEXT NOT NULL,
+    source       TEXT NOT NULL,
+    signature    TEXT NOT NULL,
+    signature_id INTEGER,
+    severity     INTEGER NOT NULL,
+    category     TEXT,
+    src          TEXT,
+    dst          TEXT,
+    proto        TEXT,
+    dst_port     INTEGER,
+    status       TEXT NOT NULL DEFAULT 'new',
+    note         TEXT,
+    raw          TEXT NOT NULL,
+    import_id    INTEGER REFERENCES imports(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_alerts_ts ON alerts(ts);
+CREATE INDEX idx_alerts_status ON alerts(status);
+
+CREATE TABLE investigations (
+    id         INTEGER PRIMARY KEY,
+    title      TEXT NOT NULL,
+    status     TEXT NOT NULL DEFAULT 'open',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    notes      TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE investigation_items (
+    id               INTEGER PRIMARY KEY,
+    investigation_id INTEGER NOT NULL REFERENCES investigations(id) ON DELETE CASCADE,
+    kind             TEXT NOT NULL,      -- scan | asset | alert | connection
+    ref_id           INTEGER NOT NULL,
+    note             TEXT NOT NULL DEFAULT '',
+    added_at         TEXT NOT NULL
+);
+CREATE INDEX idx_items_inv ON investigation_items(investigation_id);
+"""
+
+MIGRATIONS: tuple[str, ...] = (_V1, _V2, _V3)
 SCHEMA_VERSION = len(MIGRATIONS)
 
 

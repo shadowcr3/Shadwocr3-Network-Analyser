@@ -2,9 +2,13 @@
 
 ```
 src/shadowcr3_na/
-  core/        no Qt, no SQLite: scope, policy, runner (Nmap adapter), parser, scanner, export, environment
-  storage/     SQLite: db (migrations), repository (scans), audit (append-only log)
-  gui/         PySide6: main_window, worker (QThread), host_table (model), audit_dialog, app
+  core/        no Qt, no SQLite: scope, policy, runner (Nmap adapter), parser, scanner, export (CSV),
+               importers/ (Suricata EVE, Zeek, TShark), netmon, topology, integrations
+  storage/     SQLite: db (migrations), repository (scans), inventory (assets, connections, alerts,
+               imports), investigations, audit (append-only log)
+  reports/     branded PDF reports (ReportLab): scan assessment and investigation
+  gui/         PySide6: workstation shell, pages/ (dashboard, topology, assets, packets, alerts,
+               investigations, integrations), main_window (reconnaissance), tasks, charts, theme
   cli.py       argparse front end over the same core and storage
   paths.py, logging_setup.py
 ```

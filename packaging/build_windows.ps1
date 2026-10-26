@@ -1,4 +1,4 @@
-# Build a Windows one-folder distribution. Run from the project root. also please check the code twice before publishing for any messages
+# Build a Windows one-folder distribution. Run from the project root.
 # NOT verified by the automated test suite: smoke-test the resulting exe before releasing.
 $ErrorActionPreference = "Stop"
 python -m pip install -e ".[gui,dev]"

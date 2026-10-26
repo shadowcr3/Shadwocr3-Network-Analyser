@@ -109,7 +109,7 @@ def test_prune_keeps_the_newest(conn):
 
 
 def test_schema_stamp_and_foreign_keys(conn):
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 2
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 3
     assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
 
 
@@ -163,13 +163,13 @@ def test_migration_v1_to_v2_preserves_data_and_makes_a_backup(tmp_path):
 def test_failed_migration_rolls_back_completely(tmp_path, monkeypatch):
     db = tmp_path / "m.sqlite3"
     connect(db).close()  # fully migrated
-    bad_v3 = "CREATE TABLE half_done (x INTEGER); SELECT * FROM table_that_does_not_exist;"
-    monkeypatch.setattr(dbmod, "MIGRATIONS", (*dbmod.MIGRATIONS, bad_v3))
-    monkeypatch.setattr(dbmod, "SCHEMA_VERSION", 3)
-    with pytest.raises(StorageError, match="migration to version 3 failed"):
+    bad_next = "CREATE TABLE half_done (x INTEGER); SELECT * FROM table_that_does_not_exist;"
+    monkeypatch.setattr(dbmod, "MIGRATIONS", (*dbmod.MIGRATIONS, bad_next))
+    monkeypatch.setattr(dbmod, "SCHEMA_VERSION", 4)
+    with pytest.raises(StorageError, match="migration to version 4 failed"):
         connect(db)
     check = sqlite3.connect(db)
-    assert check.execute("PRAGMA user_version").fetchone()[0] == 2
+    assert check.execute("PRAGMA user_version").fetchone()[0] == 3
     assert check.execute(
         "SELECT COUNT(*) FROM sqlite_master WHERE name = 'half_done'").fetchone()[0] == 0
     check.close()
